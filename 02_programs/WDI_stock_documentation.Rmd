@@ -3,16 +3,9 @@ title: "WDI Stock Document"
 author: "Brian Stacy"
 date: "10/4/2021"
 output: 
-  bookdown::gitbook:
-    toc_depth: 1
-    collapse: section  
-    download: null  
-    toolbar:  
-    position: fixed  
-    search: yes  
-  # bookdown::word_document2:
-  #   toc_depth: 1
-  #   collapse: section  
+  bookdown::word_document2:
+   toc_depth: 1
+   collapse: section  
 ---
 
 ```{r setup, include=FALSE}

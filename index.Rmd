@@ -1,0 +1,150 @@
+---
+title: "WDI Stock Document"
+author: "Brian Stacy"
+date: "10/4/2021"
+output_dir: "docs"
+output: 
+  bookdown::gitbook:
+    toc_depth: 2
+    collapse: section  
+    download: null  
+    toolbar:  
+    position: fixed  
+    search: yes  
+  # bookdown::word_document2:
+  #   toc_depth: 1
+  #   collapse: section  
+---
+# World Development Indicators
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(wbstats)
+library(reticulate)
+library(here)
+library(jsonlite)
+
+dir <- here()
+
+
+```
+
+```{r metadata, include=FALSE}
+
+# wdi_indicators <- wb_indicators() %>%
+#   filter(source_id==2)
+
+metadata_url <- 'https://api.worldbank.org/v2/sources/2/series/all/metadata?per_page=20000&format=json'
+metadata_json <- fromJSON(metadata_url)
+
+#format the data
+indicators_json <- metadata_json$source$concept
+indicators_json <- indicators_json[[1]]$variable[[1]]
+
+indicators_df <- indicators_json %>%
+  rename(series_id=id) %>%
+  unnest(metatype) %>%
+  pivot_wider(
+    names_from=id,
+    values_from=value
+  )
+
+```
+
+
+
+```{r sections, echo=FALSE, results='asis'}
+
+for (t in unique(indicators_df$Topic)) {
+  
+    cat("\n") 
+    cat("##", t, "\n") # Create 1st level headings with the names.
+    
+  
+  topic_df <- indicators_df %>%
+    filter(Topic==t)
+  
+  for (i in topic_df$IndicatorName) {
+  
+    cat("\n") 
+    cat("###", i, "\n") # Create second level headings with the names.
+    
+    row <- which(topic_df$IndicatorName==i)
+    temp_df <- topic_df[row,]
+    
+    series_text <- temp_df$series_id
+    long_def_text <- temp_df$Longdefinition
+    development_rel_text <- temp_df$Developmentrelevance
+    source_text <- temp_df$Source
+    method_text <- temp_df$Statisticalconceptandmethodology
+    aggregation_text <- temp_df$Aggregationmethod
+    limitations_text <- temp_df$Limitationsandexceptions
+    topic_text <- temp_df$Topic
+    comments_text <- temp_df$Generalcomments
+    
+    cat("#### What is the indicator? {-}", "\n\n", long_def_text, "\n\n", "Topic:", topic_text, "\n\n", "Series ID:", series_text, "\n\n\n" )
+    
+    cat("#### Why is it relevant? {-}", "\n\n", development_rel_text,  "\n\n\n")
+  
+    cat("#### What is the data source? {-}", "\n\n", source_text,  "\n\n\n")
+  
+    cat("#### What is the methodology? {-}", "\n\n", method_text,  "\n\n\n")
+    
+    cat("#### How is it aggregated? {-}", "\n\n", aggregation_text,  "\n\n\n")
+  
+    cat("#### What are the limitations? {-}", "\n\n", limitations_text,  "\n\n\n")
+    
+    cat("#### What else should I know? {-}", "\n\n", comments_text,  "\n\n\n")
+}
+
+  
+}
+
+
+```
+
+
+```{r indtext, eval=FALSE, include=FALSE}
+
+
+indicator <- 'SI.POV.GINI'
+row <- which(wdi_indicators$indicator_id==indicator)
+
+text <- wdi_indicators[row,4] %>% as.character()
+
+```
+
+
+```{python eval=FALSE, include=FALSE}
+import os
+import openai
+
+openai.api_key ='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'
+
+s= "Text: %s \n\nKeywords:" % (r.text)
+
+
+response = openai.Completion.create(
+  engine="davinci",
+  prompt=s,
+  temperature=0.3,
+  max_tokens=60,
+  top_p=1,
+  frequency_penalty=0.8,
+  presence_penalty=0,
+  stop=["\n"]
+)
+
+print(response)
+return_text=response.choices[0].text
+```
+
+```{r keywords, eval=FALSE, include=FALSE}
+
+response <- py$return_text
+
+
+```
+
+
