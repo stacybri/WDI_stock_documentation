@@ -3,3 +3,7 @@
 .RData
 .Ruserdata
 password.R
+./01_inputs/WDIData.csv
+./_main_files/**
+./_book/**
+01_inputs/WDIData.csv

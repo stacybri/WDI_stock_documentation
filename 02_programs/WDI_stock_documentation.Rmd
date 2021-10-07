@@ -7,8 +7,9 @@ output:
    toc_depth: 1
    collapse: section  
 ---
+# World Development Indicators
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, dpi=300}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(wbstats)
@@ -41,16 +42,124 @@ indicators_df <- indicators_json %>%
     values_from=value
   )
 
+write_excel_csv(indicators_df, paste0(dir, "/03_outputs/indicator_metadata.csv"))
+
+country_metadata <- wb_countries()
+
+```
+
+
+```{r tiles, echo=FALSE, fig.height=2, fig.width=10}
+
+
+year_chart <- function(indicator) {
+    tile_df <- year_df %>%
+      filter(series_id==indicator)
+      
+    # tileplot 
+    ggplot(tile_df, aes(x=date, y=series_id, fill= as.character(available))) + 
+      geom_tile(color = "white") +
+      #geom_text(aes(label=Score), color='white') +
+      ylab('Indicator') +
+      theme_void() +
+      scale_fill_manual(
+        values=c("0"="#001219", "1"="#0a9396")
+      ) +
+      scale_x_continuous(breaks=seq(from=1960, to=2020, by=10)) +
+      #scale_fill_binned(guide = guide_coloursteps(show.limits = TRUE)) +
+      #scale_y_discrete(limits = rev(levels(tile_df$source_name))) +
+        theme(
+          panel.grid.minor.y = element_blank(),
+          panel.grid.major.y = element_blank(),
+          axis.text.y=element_blank(),
+          axis.title.y = element_blank(),
+          legend.position = 'none',
+          #legend.text = element_text(size=14),
+          plot.title = element_text(size=16),
+          axis.text.x = element_text(size=14)
+          
+        ) +
+      ggtitle('Data Availability by Year')
+
+}
+
+income_chart <- function(indicator) {
+
+  income_df %>%
+    filter(series_id==indicator) %>%
+    ggplot(aes(x=Percentage, y=income_level)) +
+      geom_col(fill='#005f73') +
+      geom_text(aes(label=paste0(round(100*Percentage,0),"%")), color="black", 
+                position = position_dodge(width = .9),    # move to center of bars
+                vjust = -1,
+                size=5) +    # nudge above top of bar) +
+      scale_x_continuous(labels=scales::percent) +
+      theme_void() +
+      expand_limits(x=c(0,1)) +
+      theme(
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(size=14),
+        
+      ) +
+    coord_flip() +
+    ggtitle('Percentage of countries with data since 2010 by income group.')
+
+}
+    
+
+
 ```
 
 
 
-```{r sections, echo=FALSE, results='asis'}
+```{r wbdata, include=FALSE }
+
+#downloaded bulk data for all indicators from WDI
+data_series_df <- read_csv(paste0(dir, "/01_inputs/WDIData.csv")) %>%
+  pivot_longer(cols=c(5:65),
+               names_to='date',
+               values_to='values') %>%
+  rename(series_id=`Indicator Code`,
+         iso3c=`Country Code`,
+         country=`Country Name`) %>%
+  mutate(available=if_else(!is.na(values),1,0),
+         date=as.numeric(date)) %>%
+    left_join(country_metadata) %>%
+    filter(!(income_level %in% c('Aggregates', 'Not classified')))
+
+  
+year_df <- data_series_df %>%
+  group_by(series_id, date) %>%
+  summarise(available=max(available))
+
+#calculate number of countries with data in past 10 years by income level
+income_df <- data_series_df %>%
+  filter(date>=2010) %>%
+  group_by(series_id, income_level, iso3c) %>%
+  summarise(available=max(available, na.rm=T)) %>%
+  group_by(series_id, income_level) %>%
+  summarise(available=sum(available, na.rm=T),
+            total=n()) %>%
+  mutate(Percentage=available/total,
+         income_level=factor(income_level, levels=c("Low income", "Lower middle income", "Upper middle income", "High income"))) 
+
+
+
+
+
+
+```
+
+
+
+
+```{r sections, echo=FALSE, results='asis', fig.height=2, fig.width=10}
 
 for (t in unique(indicators_df$Topic)) {
-  
     cat("\n") 
-    cat("#", t, "\n") # Create 1st level headings with the names.
+    cat("##", t, "\n") # Create 1st level headings with the names.
     
   
   topic_df <- indicators_df %>%
@@ -59,10 +168,11 @@ for (t in unique(indicators_df$Topic)) {
   for (i in topic_df$IndicatorName) {
   
     cat("\n") 
-    cat("##", i, "\n") # Create second level headings with the names.
+    cat("###", i, "\n") # Create second level headings with the names.
     
     row <- which(topic_df$IndicatorName==i)
     temp_df <- topic_df[row,]
+    
     
     series_text <- temp_df$series_id
     long_def_text <- temp_df$Longdefinition
@@ -73,8 +183,33 @@ for (t in unique(indicators_df$Topic)) {
     limitations_text <- temp_df$Limitationsandexceptions
     topic_text <- temp_df$Topic
     comments_text <- temp_df$Generalcomments
+    copy_text <- temp_df$License_Type
+    copy_link_text <- temp_df$License_URL
     
-    cat("### What is the indicator? {-}", "\n\n", long_def_text, "\n\n", "Topic:", topic_text, "\n\n", "Series ID:", series_text, "\n\n\n" )
+    #get first and last year available
+    yr_df <- year_df %>%
+      filter(series_id==series_text) %>%
+      filter(available==1)
+    
+    fy_text<-min(yr_df$date, na.rm=T)
+    ly_text<-max(yr_df$date, na.rm=T)
+    
+
+    cat("### What is the indicator? {-}", "\n\n", long_def_text, "\n\n", "Topic:", topic_text, "\n\n", "Series ID:", series_text, "\n\n", "Copyright:", copy_text,", ",copy_link_text, "\n\n", "First year with any data:", fy_text, "\n\n", "Last year with any data:", ly_text, "\n\n\n" )
+    
+
+    cat("### What years are data available? {-}", "\n\n", "The figure below shows years in which data is available for at least one country.  Dates shaded in black have no data, while dates shaded in green have data for at least one country", "\n\n\n")
+    
+    print(year_chart(series_text))
+    
+    cat("\n\n")
+    
+        
+    cat("### Which countries have data? {-}", "\n\n", "The figure below shows the percentage of countries in each income group with a value since 2010 for that indicator.", "\n\n")
+    
+    print(income_chart(series_text))  
+    
+    cat("\n\n")
     
     cat("### Why is it relevant? {-}", "\n\n", development_rel_text,  "\n\n\n")
   
@@ -86,7 +221,9 @@ for (t in unique(indicators_df$Topic)) {
   
     cat("### What are the limitations? {-}", "\n\n", limitations_text,  "\n\n\n")
     
+  
     cat("### What else should I know? {-}", "\n\n", comments_text,  "\n\n\n")
+
 }
 
   
@@ -137,5 +274,4 @@ response <- py$return_text
 
 
 ```
-
 
