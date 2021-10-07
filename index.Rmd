@@ -7,9 +7,6 @@ output:
   bookdown::gitbook:
     toc_depth: 2
     collapse: section  
-    download: null  
-    toolbar:  
-    position: fixed  
     search: yes  
   # bookdown::word_document2:
   #   toc_depth: 1
@@ -17,7 +14,7 @@ output:
 ---
 # World Development Indicators
 
-```{r setup, include=FALSE, dpi=300}
+```{r setup, include=FALSE, dpi=300, fig.path = "plots"}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(wbstats)
