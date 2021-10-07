@@ -24,6 +24,8 @@ library(jsonlite)
 
 dir <- here()
 
+source(paste0(dir,'/password.R'),
+       echo = TRUE)
 
 ```
 
@@ -254,7 +256,7 @@ text <- wdi_indicators[row,4] %>% as.character()
 import os
 import openai
 
-openai.api_key ='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'
+openai.api_key =r.open_ai_key
 
 s= "Text: %s \n\nKeywords:" % (r.text)
 
