@@ -5,12 +5,37 @@ date: "10/4/2021"
 output_dir: "docs"
 output: 
   bookdown::gitbook:
-    toc_depth: 2
-    collapse: section  
-    search: yes  
-  # bookdown::word_document2:
-  #   toc_depth: 1
-  #   collapse: section  
+    split_by: chapter
+    config:
+        toc:
+          collapse: section
+          scroll_highlight: true
+          before: null
+          after: null
+        toolbar:
+          position: fixed
+        edit : null
+        download: null
+        search:
+          engine: fuse
+          # options to control/tune search engine behavior (for
+          # fuse.js, refer to https://fusejs.io/api/options.html)
+          options: null
+        fontsettings:
+          theme: white
+          family: sans
+          size: 2
+        sharing:
+          facebook: true
+          github: false
+          twitter: true
+          linkedin: false
+          weibo: false
+          instapaper: false
+          vk: false
+          whatsapp: false
+          all: ['facebook', 'twitter', 'linkedin', 'weibo', 'instapaper']
+        info: true
 ---
 # World Development Indicators
 
@@ -37,6 +62,10 @@ source(paste0(dir,'/password.R'),
 metadata_url <- 'https://api.worldbank.org/v2/sources/2/series/all/metadata?per_page=20000&format=json'
 metadata_json <- fromJSON(metadata_url)
 
+# #read in extra metadata info on derived, topics
+series_meta_df <- read_csv(paste0(dir, "/01_inputs/WDI_metrics_coverage_fusion_rev.csv")) %>%
+  mutate(series_id=str_to_upper(indicatorcode))
+
 #format the data
 indicators_json <- metadata_json$source$concept
 indicators_json <- indicators_json[[1]]$variable[[1]]
@@ -47,7 +76,9 @@ indicators_df <- indicators_json %>%
   pivot_wider(
     names_from=id,
     values_from=value
-  )
+  ) %>%
+  left_join(series_meta_df) %>%
+  mutate(main_topic=gsub( ":.*$", "", Topic ))
 
 write_excel_csv(indicators_df, paste0(dir, "/03_outputs/indicator_metadata.csv"))
 
@@ -162,16 +193,16 @@ income_df <- data_series_df %>%
 
 
 
-```{r sections, echo=FALSE, results='asis', fig.height=2, fig.width=10}
+```{r sections, echo=FALSE, results='asis', fig.height=2, fig.width=10, cache=TRUE}
 
-for (t in unique(indicators_df$Topic)) {
+for (t in unique(indicators_df$main_topic)) {
 
     cat("\n") 
     cat("##", t, "\n") # Create 1st level headings with the names.
     
   
   topic_df <- indicators_df %>%
-    filter(Topic==t)
+    filter(main_topic==t)
   
   for (i in topic_df$IndicatorName) {
   

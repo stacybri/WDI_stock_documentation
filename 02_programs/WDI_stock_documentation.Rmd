@@ -9,7 +9,8 @@ output:
 ---
 # World Development Indicators
 
-```{r setup, include=FALSE, dpi=300}
+
+```{r setup, include=FALSE, dpi=300, fig.path = "plots"}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(wbstats)
@@ -21,7 +22,6 @@ dir <- here()
 
 source(paste0(dir,'/password.R'),
        echo = TRUE)
-
 
 ```
 
@@ -94,11 +94,11 @@ income_chart <- function(indicator) {
       geom_col(fill='#005f73') +
       geom_text(aes(label=paste0(round(100*Percentage,0),"%")), color="black", 
                 position = position_dodge(width = .9),    # move to center of bars
-                vjust = -1,
+                vjust = -.5,
                 size=5) +    # nudge above top of bar) +
       scale_x_continuous(labels=scales::percent) +
       theme_void() +
-      expand_limits(x=c(0,1)) +
+      expand_limits(x=c(0,1.2)) +
       theme(
         axis.title.x = element_blank(),
         axis.title.y = element_blank(), 
@@ -161,6 +161,7 @@ income_df <- data_series_df %>%
 ```{r sections, echo=FALSE, results='asis', fig.height=2, fig.width=10}
 
 for (t in unique(indicators_df$Topic)) {
+
     cat("\n") 
     cat("##", t, "\n") # Create 1st level headings with the names.
     
@@ -253,7 +254,6 @@ import openai
 
 openai.api_key =r.open_ai_key
 
-
 s= "Text: %s \n\nKeywords:" % (r.text)
 
 
@@ -278,4 +278,6 @@ response <- py$return_text
 
 
 ```
+
+
 
